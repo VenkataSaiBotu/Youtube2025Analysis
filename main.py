@@ -2,6 +2,7 @@ import pandas as pd
 import mysql.connector
 import logging
 from sqlalchemy import create_engine
+from tabulate import tabulate
 
 
 logging.basicConfig(level = logging.INFO, format = '%(asctime)s - %(levelname)s - %(message)s')
@@ -48,6 +49,7 @@ dataFrame['ai_generated_content_percent'] = pd.to_numeric(dataFrame['ai_generate
 dataFrame['quantom_computing_topics'] = pd.to_numeric(dataFrame['quantom_computing_topics'], errors = 'coerce').fillna(0)
 dataFrame['engagement_score'] = pd.to_numeric(dataFrame['engagement_score'], errors = 'coerce').fillna(0)
 dataFrame['content_value_index'] = pd.to_numeric(dataFrame['content_value_index'], errors = 'coerce').fillna(0)
+dataFrame['metaverse_integration_level'] = dataFrame['metaverse_integration_level'].fillna('NA')
 
 #Handling missing or null values
 dataFrame.dropna(subset = ['channel_name','youtuber_name','total_videos'], inplace = True)
@@ -77,14 +79,14 @@ except mysql.connector.Error as error :
     logging.error("Database connection error {error}")
 
 menu = {
-    "1" : ("Total number of videos", "SELECT SUM(total_videos) FROM videos"),
+    "1" : ("Total number of videos", "SELECT SUM(total_videos) as Total_no_of_videos FROM videos"),
     "2" : ("Video length (minutes) analysis", "select max(avg_video_length_min) as Maximum,round(avg(avg_video_length_min),3) as Average,min(avg_video_length_min) as Minimum from videos"),
     "3" : ("AI content analysis","select max(ai_generated_content_percent) as Maximum,round(avg(ai_generated_content_percent),3) as Average,min(ai_generated_content_percent) as Minimum from videos"),
     "4" : ("Engagement score analysis","select max(engagement_score) as Maximum,round(avg(engagement_score),3) as Average,min(engagement_score) as Minimum from videos;"),
     "5" : ("Neural interface compatability analysis","select neural_interface_compatible,count(*) as no_of_channels from videos group by neural_interface_compatible"),
     "6" : ("Holographics analysis","select holographic_content_rating,count(*) as no_of_channels from videos group by holographic_content_rating order by holographic_content_rating"),
     "7" : ("Metaverse integration analysis","select metaverse_integration_level,count(*) as Value from videos group by metaverse_integration_level order by metaverse_integration_level"),
-    "8" : ("Top 5 performing channels","select channel_name,best_video,engagement_score,content_value_index from videos order by engagement_score desc limit 10"),
+    "8" : ("Top 10 performing channels","select channel_name,best_video,engagement_score,content_value_index from videos order by engagement_score desc limit 10"),
     "9" : ("Top 10 high content and low volume channels","select channel_name,youtuber_name from videos order by content_value_index desc, total_videos asc limit 10"),
     "10" : ("Get all details for a specific channel","")
 }
@@ -100,7 +102,6 @@ while True:
 
     if choice == "0" :
         logging.info("User exited the analysis...!!!")
-        print("Exiting analysis")
         break
     elif choice in menu :
         msg,query = menu[choice]
@@ -119,6 +120,7 @@ while True:
                     for row in results :
                         for col,val in zip(columns,row):
                             print(f"{col} : {val}")
+ 
                 else : 
                     logging.warning(f"No data found for channel {channel_name}")
                     print("No data found for that channel")
@@ -126,7 +128,6 @@ while True:
             
             except Exception as e :
                 logging.error(f"Query execution failed for channel search: {e}")
-                print(e)
                 print("Something went wrong while fetching channel details")
         
         else :
@@ -136,12 +137,15 @@ while True:
                 cursor.execute(query)
                 results = cursor.fetchall()
                 print(msg)
+                columns = [col[0] for col in cursor.description]
 
-                for row in results :
-                    print(row)
+                '''for row in results :
+                    for col,val in zip(columns,row) :
+                        print(f"{col} : {val}")'''
+                
+                print(tabulate(results, headers = columns, tablefmt = "grid"))
 
             except Exception as e :
                 logging.error(f"query execution failed {e}")
     else:
         logging.warning(f"User entered invalid choice: {choice}")
-
